@@ -1,33 +1,19 @@
 <template>
-  <!-- Component Root element -->
-  <div class="component-root">
-
-    <!-- Title from props -->
-    <h2>{{ title }}</h2>
-
-    <!-- Counter value -->
-    <p>Counter: {{ counter }}</p>
-
-    <!-- Button that use increment method -->
-    <button @click="increment">Increase</button>
-
-    <!-- Toggle state -->
-    <button @click="toggleActive">Toggle active state</button>
-
-    <!-- Additional content slot -->
-    <slot name="extra">
-      <em>Additional content</em>
-    </slot>
+  <div class="component-wrapper">
+    <h2>{{ props.title || 'Lifecycle Demo Component' }}</h2>
+    <p>Count: {{ count }}</p>
+    <p>Doubled: {{ doubled }}</p>
+    <button @click="increment">Increment</button>
   </div>
 </template>
 
-<script lang="ts">
-
-// IMPORTS
+<script setup lang="ts">
+// -------------------------------
+// Imports
+// -------------------------------
 import {
-  defineComponent,
   ref,
-  toRefs,
+  computed,
   watch,
   onBeforeMount,
   onMounted,
@@ -38,155 +24,128 @@ import {
   onActivated,
   onDeactivated,
   onErrorCaptured,
-} from 'vue';
+  onRenderTracked,
+  onRenderTriggered,
+} from 'vue'
 
-//  defineComponent
-export default defineComponent({
-  name: 'FullLifecycleComponent',
-  // Props if needed
-  props: {
-    initial: {
-      type: Number,
-      required: false,
-      default: 0,
-    },
-    // Prop for Page title
-    titleProp: {
-      type: String,
-      required: false,
-      default: 'Template component',
-    }
-  },
-  // Announced events that can be emitted
-  emits: ['updated', 'error'],
+// -------------------------------
+// Props definition
+// -------------------------------
+interface Props {
+  title?: string
+}
+const props = defineProps<Props>()
 
-  // Setup function
-  setup(props, { emit }) {
+// -------------------------------
+// Emits definition
+// -------------------------------
+const emit = defineEmits<{
+  (e: 'update', value: string): void
+}>()
 
-    // Reactive counter from props
-    const counter = ref<number>(props.initial);
-    // Reactive boolean state
-    const active = ref<boolean>(true);
-    // Reactive title from props
-    const title = ref<string>(props.titleProp);
+// -------------------------------
+// Reactive state
+// -------------------------------
+const count = ref(0) // Example reactive state
 
-    // Example of watch for counter with immediate call
-    watch(
-      // Tracking the counter value
-      () => counter.value,
-      (newVal, oldVal) => {
-        // Throw an 'updated' event every time the counter changes
+// -------------------------------
+// Computed properties
+// -------------------------------
+const doubled = computed(() => count.value * 2) // Derived state example
 
-        // emit an event with information
-        emit('updated', { newVal, oldVal });
-      },
-      // Settings for watch
-      { immediate: false }
-    );
+// -------------------------------
+// Methods
+// -------------------------------
+function increment() {
+  count.value++
+  emit('update', `Count updated to ${count.value}`)
+}
 
-    // Increment counter function
-    const increment = () => {
-      // increase the counter
-      counter.value += 1;
-      // log the value
-      console.log('counter', counter.value);
-    };
+// -------------------------------
+// Watchers
+// -------------------------------
+watch(count, (newVal, oldVal) => {
+  console.log(`[watch] count changed from ${oldVal} to ${newVal}`)
+})
 
-    // Toggle active state function
-    const toggleActive = () => {
-      // toggle active state
-      active.value = !active.value;
-      // log the value
-      console.log('active', active.value);
-    };
+// -------------------------------
+// Lifecycle hooks
+// -------------------------------
 
-    // An example of an exception hook for intercepting errors in child components
-    onErrorCaptured((err, instance, info) => {
-      // Emit an error event and return false so as not to absorb the error.
+// Called right before the component is mounted (template not yet rendered)
+onBeforeMount(() => {
+  console.log('[onBeforeMount] - Called before the component is mounted. Use this for last-minute setup.')
+})
 
-      // inform parents components about the error
-      emit('error', { err, info });
-      // By returning false, we allow the error to be raised further
-      return false;
-    });
+// Called after the component is mounted to the DOM
+onMounted(() => {
+  console.log('[onMounted] - Called after mounting. Use this for DOM access, API calls, or initializing libraries.')
+})
 
-    // Life cycle hooks (Composition API)
-    onBeforeMount(() => {
-      // Executed immediately before mounting the component
-      // It is good to initialize external subscriptions here, but do not manipulate the DOM
-      console.log('Before mount');
-    });
+// Called right before reactive data updates trigger a re-render
+onBeforeUpdate(() => {
+  console.log('[onBeforeUpdate] - Called before DOM updates. Use this for pre-update calculations or cleanup.')
+})
 
-    onMounted(() => {
-      // Executed after the component is mounted in the DOM
-      // It is safe to access DOM elements here
-      console.log('Component mounted');
-    });
+// Called after the DOM has been updated due to reactive changes
+onUpdated(() => {
+  console.log('[onUpdated] - Called after DOM updates. Use this to react to layout or visual changes.')
+})
 
-    onBeforeUpdate(() => {
-      // Called before updating reactive dependencies in the template
-      // Here you can capture the state before updating
-    });
+// Called before the component instance is unmounted (cleanup stage begins)
+onBeforeUnmount(() => {
+  console.log('[onBeforeUnmount] - Called before unmounting. Use this to stop intervals, remove listeners, etc.')
+})
 
-    onUpdated(() => {
-      // Called after DOM update
-      // Useful for actions that require an updated DOM
-    });
+// Called after the component instance has been unmounted
+onUnmounted(() => {
+  console.log('[onUnmounted] - Called after unmounting. Use this for final cleanup or logging.')
+})
 
-    onBeforeUnmount(() => {
-      // Executed before component removal
-      // It is recommended to unsubscribe from external subscriptions here
-      console.log('Before unmount');
-    });
+// Called when a kept-alive component is activated (inserted into the DOM again)
+onActivated(() => {
+  console.log('[onActivated] - Called when a keep-alive component is re-activated.')
+})
 
-    onUnmounted(() => {
-      // Executed after the component has already been unmounted
-      // Cleaning timers and resources — a good place
-      console.log('Component unmounted');
-    });
+// Called when a kept-alive component is deactivated (removed from the DOM)
+onDeactivated(() => {
+  console.log('[onDeactivated] - Called when a keep-alive component is deactivated.')
+})
 
-    // Additional hooks that are applicable in the keep-alive context
-    onActivated(() => {
-      // Called when the component is activated inside <keep-alive>
-      // You can restore state or make network requests
-    });
+// Called when an error is captured from child components
+onErrorCaptured((err, instance, info) => {
+  console.error('[onErrorCaptured] - Error captured:', err, info)
+  // Return false to prevent further propagation
+  return false
+})
 
-    onDeactivated(() => {
-      // Called when the component is deactivated inside <keep-alive>
-      // You can pause animations or save state
-    });
+// Called when a reactive dependency is tracked (for debugging reactivity)
+onRenderTracked((e) => {
+  console.log('[onRenderTracked] - A reactive dependency was tracked:', e)
+})
 
-    // Expose parts of the interface to the template via return
-    // Return only what is needed in the template or to external consumers
-    return {
-      // Reactive refs
-      counter,
-      active,
-      title,
+// Called when a reactive dependency triggers a re-render (for debugging)
+onRenderTriggered((e) => {
+  console.log('[onRenderTriggered] - A reactive dependency triggered re-render:', e)
+})
 
-      // Functions
-      increment,
-      toggleActive,
-
-      // props
-
-      // use props as reactive refs if necessary
-      ...toRefs(props),
-    };
-  }
-});
 </script>
 
 <style scoped>
-  .component-root {
-    padding: 16px;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-  }
-
-  button {
-    margin-right: 8px;
-    padding: 8px 12px;
-    cursor: pointer;
-  }
+.component-wrapper {
+  padding: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 12px;
+}
+button {
+  padding: 0.5rem 1rem;
+  border: none;
+  background: #4caf50;
+  color: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+}
+button:hover {
+  background: #43a047;
+}
 </style>
